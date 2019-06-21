@@ -1,0 +1,48 @@
+workflow:
+    version: 0.3.0
+    inputs:
+      files:
+        - $[[code]]
+        - $[[names]]
+        - code/eval.py
+      parameters:
+        helloworld: $[[code]]
+        inputfile: $[[names]]
+        outputfile: results/greetings.txt
+        sleeptime: $[[sleeptime]]
+        waittime: $[[waittime]]
+        evaluator: code/eval.py
+    workflow:
+      type: serial
+      specification:
+        steps:
+          - environment: 'python:2.7'
+            commands:
+              - python "${helloworld}"
+                  --inputfile "${inputfile}"
+                  --outputfile "${outputfile}"
+                  --sleeptime ${sleeptime}
+          - environment: 'python:2.7'
+            commands:
+              - wait ${waittime}
+              - python "${evaluator}"
+                  --inputfile "${outputfile}"
+                  --outputfile results.json
+    outputs:
+      files:
+       - results/greetings.txt
+parameters:
+    - id: code
+      name: 'Code file'
+      datatype: file
+      defaultValue: code/helloworld.py
+    - id: names
+      name: 'Input file'
+      datatype: file
+      as: data/names.txt
+    - id: sleeptime
+      datatype: int
+      defaultValue: 10
+    - id: waittime
+      datatype: int
+      defaultValue: 5
