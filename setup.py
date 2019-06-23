@@ -1,8 +1,10 @@
 from setuptools import setup
 
 
+readme = open('README.rst').read()
+
 install_requires=[
-    'benchmark-templates==0.1.1'
+    'benchmark-templates==0.1.2'
 ]
 
 
@@ -24,9 +26,14 @@ extras_require = {
 
 setup(
     name='benchmark-multiprocess',
-    version='0.1.0',
+    version='0.1.1',
     description='Simple Workflow Engine for Reproducible Benchmark Templates',
+    long_description=readme,
+    long_description_content_type='text/x-rst',
     keywords='reproducibility benchmarks data analysis',
+    url='https://github.com/scailfin/benchmark-multiproc-backend',
+    author='Heiko Mueller',
+    author_email='heiko.muller@gmail.com',
     license='MIT',
     packages=['benchproc'],
     include_package_data=True,

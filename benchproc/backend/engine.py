@@ -23,11 +23,11 @@ from functools import partial
 from multiprocessing import Lock, Pool
 from string import Template
 
-from benchtmpl.backend.util import FileCopy
+from benchtmpl.backend.files import FileCopy
 from benchtmpl.workflow.resource.base import FileResource
 
 import benchproc.backend.task as tasks
-import benchtmpl.backend.util as fileio
+import benchtmpl.backend.files as fileio
 import benchtmpl.error as err
 import benchtmpl.util.core as util
 import benchtmpl.workflow.state as wf
@@ -76,7 +76,7 @@ class MultiProcessWorkflowEngine(object):
                     pool.terminate()
                 del self.tasks[run_id]
 
-    def exec(self, template, arguments, run_async=True, verbose=False):
+    def execute(self, template, arguments, run_async=True, verbose=False):
         """Execute a given workflow template for a set of argument values.
         Returns an unique identifier for the started workflow run.
 
@@ -133,25 +133,17 @@ class MultiProcessWorkflowEngine(object):
                 parameters=template.parameters
             )
             # Run workflow
-            ts = datetime.now()
-            state = wf.StateRunning(created_at=ts, started_at=ts)
             if run_async:
-                pool = Pool(processes=1)
-                task_callback_function = partial(
-                    callback_function,
-                    lock=self.lock,
-                    tasks=self.tasks,
+                self.run_async(
+                    identifier=identifier,
+                    commands=commands,
                     run_dir=run_dir,
-                    output_files=output_files
-                )
-                with self.lock:
-                    self.tasks[identifier] = (state, pool)
-                pool.apply_async(
-                    tasks.run,
-                    args=(identifier, commands, run_dir, verbose),
-                    callback=task_callback_function
+                    output_files=output_files,
+                    verbose=False
                 )
             else:
+                ts = datetime.now()
+                state = wf.StateRunning(created_at=ts, started_at=ts)
                 with self.lock:
                     self.tasks[identifier] = (state, None)
                 # Start the task and wait until completions
@@ -199,6 +191,47 @@ class MultiProcessWorkflowEngine(object):
                 return state
             except KeyError:
                 raise err.UnknownRunError(run_id)
+
+    def run_async(self, identifier, commands, run_dir, output_files, verbose=False):
+        """Run a list of commands in a separate process. This code has been put
+        into a separate method so that it can be reused by other modules (e.g.,
+        the REANA backend that uses the multi-process backend for test
+        purposes).
+
+        Parameters
+        ----------
+        identifier: string
+            Unique workflow run identifier
+        commands: list(string)
+            List of shell commands
+        output_files: list(string)
+            List of relative paths for output files
+        verbose: bool, optional
+            Print command strings to STDOUT during workflow execution
+
+        Returns
+        -------
+        benchtmpl.workflow.state.WorkflowState
+        """
+        pool = Pool(processes=1)
+        task_callback_function = partial(
+            callback_function,
+            lock=self.lock,
+            tasks=self.tasks,
+            run_dir=run_dir,
+            output_files=output_files
+        )
+        ts = datetime.now()
+        state = wf.StateRunning(created_at=ts, started_at=ts)
+        with self.lock:
+            self.tasks[identifier] = (state, pool)
+        pool.apply_async(
+            tasks.run,
+            args=(identifier, commands, run_dir, verbose),
+            callback=task_callback_function
+        )
+        return state
+
 
 # ------------------------------------------------------------------------------
 # Helper Methods

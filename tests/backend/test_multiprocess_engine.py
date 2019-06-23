@@ -52,7 +52,7 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'sleeptime': template.get_argument('sleeptime', 3)
         }
         # Run workflow asyncronously
-        run_id = self.engine.exec(template, arguments)
+        run_id = self.engine.execute(template, arguments)
         while self.engine.get_state(run_id).is_active():
             time.sleep(1)
         state = self.engine.get_state(run_id)
@@ -62,7 +62,7 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 30)
         }
-        run_id = self.engine.exec(template, arguments)
+        run_id = self.engine.execute(template, arguments)
         while self.engine.get_state(run_id).is_active():
             # Cancel the run
             self.engine.cancel_run(run_id)
@@ -74,7 +74,7 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 1)
         }
-        sync_run_id = self.engine.exec(template, arguments, run_async=False)
+        sync_run_id = self.engine.execute(template, arguments, run_async=False)
         self.assertNotEqual(run_id, sync_run_id)
         state = self.engine.get_state(sync_run_id)
         self.validate_run_result(state)
@@ -92,7 +92,7 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'sleeptime': template.get_argument('sleeptime', 3)
         }
         # Run workflow syncronously
-        sync_run_id = self.engine.exec(template, arguments, run_async=False, verbose=True)
+        sync_run_id = self.engine.execute(template, arguments, run_async=False, verbose=True)
         state = self.engine.get_state(sync_run_id)
         self.assertTrue(state.is_error())
         self.assertTrue(len(state.messages) > 0)
@@ -110,13 +110,13 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'sleeptime': template.get_argument('sleeptime', 3)
         }
         # Run workflow syncronously
-        sync_run_id = self.engine.exec(template, arguments, run_async=False)
+        sync_run_id = self.engine.execute(template, arguments, run_async=False)
         state = self.engine.get_state(sync_run_id)
         self.assertTrue(state.is_error())
         self.assertTrue(len(state.messages) > 0)
         # An error is raised if the input file does not exist
         with self.assertRaises(IOError):
-            self.engine.exec(
+            self.engine.execute(
                 template=template,
                 arguments={
                     'names': template.get_argument('names', FileHandle(UNKNOWN_FILE)),
