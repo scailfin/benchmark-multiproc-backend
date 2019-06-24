@@ -26,7 +26,7 @@ from string import Template
 from benchtmpl.backend.files import FileCopy
 from benchtmpl.workflow.resource.base import FileResource
 
-import benchproc.backend.task as tasks
+import benchproc.task as tasks
 import benchtmpl.backend.files as fileio
 import benchtmpl.error as err
 import benchtmpl.util.core as util

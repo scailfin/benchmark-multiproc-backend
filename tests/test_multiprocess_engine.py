@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 
-from benchproc.backend.engine import MultiProcessWorkflowEngine
+from benchproc.engine import MultiProcessWorkflowEngine
 from benchtmpl.io.files.base import FileHandle
 from benchtmpl.workflow.template.repo import TemplateRepository
 

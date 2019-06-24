@@ -26,7 +26,7 @@ extras_require = {
 
 setup(
     name='benchmark-multiprocess',
-    version='0.1.1',
+    version='0.1.2',
     description='Simple Workflow Engine for Reproducible Benchmark Templates',
     long_description=readme,
     long_description_content_type='text/x-rst',

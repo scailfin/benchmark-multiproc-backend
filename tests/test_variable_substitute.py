@@ -11,7 +11,7 @@ from benchtmpl.io.files.base import FileHandle
 from benchtmpl.workflow.template.base import TemplateHandle
 from benchtmpl.workflow.template.loader import DefaultTemplateLoader
 
-import benchproc.backend.engine as mp
+import benchproc.engine as mp
 import benchtmpl.error as err
 
 
