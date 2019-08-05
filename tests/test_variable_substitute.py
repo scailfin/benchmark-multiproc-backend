@@ -2,10 +2,8 @@
 referebces to variables in the workflow specifications commands.
 """
 
-from unittest import TestCase
-
 import os
-import shutil
+import pytest
 
 from benchtmpl.io.files.base import FileHandle
 from benchtmpl.workflow.template.base import TemplateHandle
@@ -15,10 +13,11 @@ import benchproc.engine as mp
 import benchtmpl.error as err
 
 
-TEMPLATE_FILE = 'tests/files/multi-step-template.yaml'
+DIR = os.path.dirname(os.path.realpath(__file__))
+TEMPLATE_FILE = os.path.join(DIR, './.files/multi-step-template.yaml')
 
 
-class TestVariableSubstitution(TestCase):
+class TestVariableSubstitution(object):
     """Test utility function of the multiprocess backend engine."""
     def test_expand_parameters(self):
         """Test parameter expansion."""
@@ -41,14 +40,13 @@ class TestVariableSubstitution(TestCase):
                 value=22
             )
         }
-        self.assertEqual(
-            mp.get_commands(template=template, arguments=arguments),
-            [
-                'python "runme.py" --inputfile "data/names.txt" --outputfile "results/greetings.txt" --sleeptime 11',
-                'wait 22',
-                'python "code/eval.py" --inputfile "results/greetings.txt" --outputfile results.json'
-            ]
-        )
+        commands = mp.get_commands(template=template, arguments=arguments)
+        CMDS = [
+            'python "runme.py" --inputfile "data/names.txt" --outputfile "results/greetings.txt" --sleeptime 11',
+            'wait 22',
+            'python "code/eval.py" --inputfile "results/greetings.txt" --outputfile results.json'
+        ]
+        assert commands == CMDS
         # Default values
         arguments = {
             'names': template.get_argument(
@@ -56,20 +54,14 @@ class TestVariableSubstitution(TestCase):
                 value=FileHandle(filepath='data/myfriends.txt')
             )
         }
-        self.assertEqual(
-            mp.get_commands(template=template, arguments=arguments),
-            [
-                'python "code/helloworld.py" --inputfile "data/names.txt" --outputfile "results/greetings.txt" --sleeptime 10',
-                'wait 5',
-                'python "code/eval.py" --inputfile "results/greetings.txt" --outputfile results.json'
-            ]
-        )
+        commands = mp.get_commands(template=template, arguments=arguments)
+        CMDS = [
+            'python "code/helloworld.py" --inputfile "data/names.txt" --outputfile "results/greetings.txt" --sleeptime 10',
+            'wait 5',
+            'python "code/eval.py" --inputfile "results/greetings.txt" --outputfile results.json'
+        ]
+        assert commands == CMDS
         # Error cases
         del template.workflow_spec['inputs']['parameters']['inputfile']
-        with self.assertRaises(err.InvalidTemplateError):
+        with pytest.raises(err.InvalidTemplateError):
             mp.get_commands(template=template, arguments=arguments)
-
-
-if __name__ == '__main__':
-    import unittest
-    unittest.main()

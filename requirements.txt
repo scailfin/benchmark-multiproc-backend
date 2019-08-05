@@ -1,1 +1,1 @@
-benchmark-templates==0.1.2
+benchmark-templates>=0.1.2

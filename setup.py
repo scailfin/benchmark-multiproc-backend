@@ -1,17 +1,18 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 readme = open('README.rst').read()
 
 install_requires=[
-    'benchmark-templates==0.1.2'
+    'benchmark-templates>=0.1.2'
 ]
 
 
 tests_require = [
     'coverage>=4.0',
-    'coveralls',
-    'nose'
+    'pytest',
+    'pytest-cov',
+    'tox'
 ]
 
 
@@ -35,10 +36,17 @@ setup(
     author='Heiko Mueller',
     author_email='heiko.muller@gmail.com',
     license='MIT',
-    packages=['benchproc'],
+    packages=find_packages(exclude=('tests',)),
     include_package_data=True,
     test_suite='nose.collector',
     extras_require=extras_require,
     tests_require=tests_require,
-    install_requires=install_requires
+    install_requires=install_requires,
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python'
+    ],
 )

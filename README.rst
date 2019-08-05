@@ -2,14 +2,17 @@
 Simple Workflow Engine for Reproducible Benchmark Templates
 ===========================================================
 
-.. image:: https://api.travis-ci.org/scailfin/benchmark-multiproc-backend.svg?branch=master
-   :target: https://travis-ci.org/scailfin/benchmark-multiproc-backend?branch=master
+.. image:: https://img.shields.io/pypi/pyversions/benchmark-multiprocess.svg
+    :target: https://pypi.org/pypi/benchmark-multiprocess
 
-.. image:: https://coveralls.io/repos/github/scailfin/benchmark-multiproc-backend/badge.svg?branch=master
-   :target: https://coveralls.io/github/scailfin/benchmark-multiproc-backend?branch=master
+.. image:: https://api.travis-ci.org/scailfin/benchmark-multiproc-backend.svg?branch=master
+    :target: https://travis-ci.org/scailfin/benchmark-multiproc-backend?branch=master
+
+.. image:: https://codecov.io/gh/scailfin/benchmark-multiproc-backend/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/scailfin/benchmark-multiproc-backend
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
-   :target: https://github.com/scailfin/benchmark-multiproc-backend/blob/master/LICENSE
+    :target: https://github.com/scailfin/benchmark-multiproc-backend/blob/master/LICENSE
 
 
 

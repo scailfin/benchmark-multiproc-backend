@@ -3,7 +3,7 @@
 from unittest import TestCase
 
 import os
-import shutil
+import pytest
 import time
 
 from benchproc.engine import MultiProcessWorkflowEngine
@@ -13,37 +13,24 @@ from benchtmpl.workflow.template.repo import TemplateRepository
 import benchtmpl.error as err
 
 
-DATA_FILE = './tests/files/names.txt'
-TEMPLATE_FILE = 'tests/files/template/template.yaml'
-TEMPLATE_WITH_INVALID_CMD = 'tests/files/template/template-invalid-cmd.yaml'
-TEMPLATE_WITH_MISSING_FILE = 'tests/files/template/template-missing-file.yaml'
-TMP_DIR = './tests/files/.tmp'
-UNKNOWN_FILE = './tests/files/.tmp/no/file/here'
-WORKFLOW_DIR = './tests/files/template'
+DIR = os.path.dirname(os.path.realpath(__file__))
+DATA_FILE = os.path.join(DIR, './.files/names.txt')
+TEMPLATE_FILE = os.path.join(DIR, './.files/template/template.yaml')
+TEMPLATE_WITH_INVALID_CMD = os.path.join(DIR, './.files/template/template-invalid-cmd.yaml')
+TEMPLATE_WITH_MISSING_FILE = os.path.join(DIR, './.files/template/template-missing-file.yaml')
+UNKNOWN_FILE = os.path.join(DIR, './.files/.tmp/no/file/here')
+WORKFLOW_DIR = os.path.join(DIR, './.files/template')
 
 
-class TestMultiprocessWorkflowEngine(TestCase):
+class TestMultiprocessWorkflowEngine(object):
     """Test executing workflows from templates using the multiprocess workflow
     engine.
     """
-    def setUp(self):
-        """Create an empty target directory for each test and intitialize the
-        file loader function.
-        """
-        self.tearDown()
-        self.engine = MultiProcessWorkflowEngine(
-            base_dir=os.path.join(TMP_DIR, 'engine')
-        )
-        self.repo = TemplateRepository(base_dir=os.path.join(TMP_DIR, 'repo'))
 
-    def tearDown(self):
-        """Remove the temporary target directory."""
-        if os.path.isdir(TMP_DIR):
-            shutil.rmtree(TMP_DIR)
-
-    def test_run_helloworld(self):
+    def test_run_helloworld(self, tmpdir):
         """Execute the helloworld example."""
-        template = self.repo.add_template(
+        repo = TemplateRepository(base_dir=os.path.join(str(tmpdir), 'repo'))
+        template = repo.add_template(
             src_dir=WORKFLOW_DIR,
             template_spec_file=TEMPLATE_FILE
         )
@@ -51,39 +38,43 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 3)
         }
+        engine = MultiProcessWorkflowEngine(
+            base_dir=os.path.join(str(tmpdir), 'engine')
+        )
         # Run workflow asyncronously
-        run_id = self.engine.execute(template, arguments)
-        while self.engine.get_state(run_id).is_active():
+        run_id = engine.execute(template, arguments)
+        while engine.get_state(run_id).is_active():
             time.sleep(1)
-        state = self.engine.get_state(run_id)
+        state = engine.get_state(run_id)
         self.validate_run_result(state)
         # Cancel run
         arguments = {
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 30)
         }
-        run_id = self.engine.execute(template, arguments)
-        while self.engine.get_state(run_id).is_active():
+        run_id = engine.execute(template, arguments)
+        while engine.get_state(run_id).is_active():
             # Cancel the run
-            self.engine.cancel_run(run_id)
+            engine.cancel_run(run_id)
             break
-        with self.assertRaises(err.UnknownRunError):
-            self.engine.get_state(run_id)
+        with pytest.raises(err.UnknownRunError):
+            engine.get_state(run_id)
         # Run workflow syncronously
         arguments = {
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 1)
         }
-        sync_run_id = self.engine.execute(template, arguments, run_async=False)
-        self.assertNotEqual(run_id, sync_run_id)
-        state = self.engine.get_state(sync_run_id)
+        sync_run_id = engine.execute(template, arguments, run_async=False)
+        assert run_id != sync_run_id
+        state = engine.get_state(sync_run_id)
         self.validate_run_result(state)
 
-    def test_run_with_invalid_cmd(self):
+    def test_run_with_invalid_cmd(self, tmpdir):
         """Execute the helloworld example with an invalid shell command."""
         # Execution fails if a file that is referenced by the workflow does not
         # exist in the created workspace
-        template = self.repo.add_template(
+        repo = TemplateRepository(base_dir=os.path.join(str(tmpdir), 'repo'))
+        template = repo.add_template(
             src_dir=WORKFLOW_DIR,
             template_spec_file=TEMPLATE_WITH_INVALID_CMD
         )
@@ -91,17 +82,21 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 3)
         }
+        engine = MultiProcessWorkflowEngine(
+            base_dir=os.path.join(str(tmpdir), 'engine')
+        )
         # Run workflow syncronously
-        sync_run_id = self.engine.execute(template, arguments, run_async=False, verbose=True)
-        state = self.engine.get_state(sync_run_id)
-        self.assertTrue(state.is_error())
-        self.assertTrue(len(state.messages) > 0)
+        sync_run_id = engine.execute(template, arguments, run_async=False, verbose=True)
+        state = engine.get_state(sync_run_id)
+        assert state.is_error()
+        assert len(state.messages) > 0
 
-    def test_run_with_missing_file(self):
+    def test_run_with_missing_file(self, tmpdir):
         """Execute the helloworld example with a reference to a missing file."""
         # Execution fails if a file that is referenced by the workflow does not
         # exist in the created workspace
-        template = self.repo.add_template(
+        repo = TemplateRepository(base_dir=os.path.join(str(tmpdir), 'repo'))
+        template = repo.add_template(
             src_dir=WORKFLOW_DIR,
             template_spec_file=TEMPLATE_WITH_MISSING_FILE
         )
@@ -109,14 +104,17 @@ class TestMultiprocessWorkflowEngine(TestCase):
             'names': template.get_argument('names', FileHandle(DATA_FILE)),
             'sleeptime': template.get_argument('sleeptime', 3)
         }
+        engine = MultiProcessWorkflowEngine(
+            base_dir=os.path.join(str(tmpdir), 'engine')
+        )
         # Run workflow syncronously
-        sync_run_id = self.engine.execute(template, arguments, run_async=False)
-        state = self.engine.get_state(sync_run_id)
-        self.assertTrue(state.is_error())
-        self.assertTrue(len(state.messages) > 0)
+        sync_run_id = engine.execute(template, arguments, run_async=False)
+        state = engine.get_state(sync_run_id)
+        assert state.is_error()
+        assert len(state.messages) > 0
         # An error is raised if the input file does not exist
-        with self.assertRaises(IOError):
-            self.engine.execute(
+        with pytest.raises(IOError):
+            engine.execute(
                 template=template,
                 arguments={
                     'names': template.get_argument('names', FileHandle(UNKNOWN_FILE)),
@@ -127,18 +125,13 @@ class TestMultiprocessWorkflowEngine(TestCase):
 
     def validate_run_result(self, state):
         """Validate the results of a run of the helloworld workflow."""
-        self.assertTrue(state.is_success())
-        self.assertEqual(len(state.resources), 1)
-        self.assertTrue('results/greetings.txt' in state.resources)
+        assert state.is_success()
+        assert len(state.resources) == 1
+        assert 'results/greetings.txt' in state.resources
         greetings = list()
         with open(state.resources['results/greetings.txt'].filepath, 'r') as f:
             for line in f:
                 greetings.append(line.strip())
-        self.assertEqual(len(greetings), 2)
-        self.assertEqual(greetings[0], 'Hello Alice!')
-        self.assertEqual(greetings[1], 'Hello Bob!')
-
-
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
+        assert len(greetings) == 2
+        assert greetings[0] == 'Hello Alice!'
+        assert greetings[1] == 'Hello Bob!'
