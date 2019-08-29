@@ -13,3 +13,9 @@
 ### 0.1.2 - 2019-06-24
 
 * Change package structure
+
+
+### 0.2.0 - 2019-08-29
+
+* Move to pytest
+* Adjust to changes in benchmark-template 0.2.0

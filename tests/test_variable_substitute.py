@@ -6,6 +6,7 @@ import os
 import pytest
 
 from benchtmpl.io.files.base import FileHandle
+from benchtmpl.workflow.parameter.value import TemplateArgument
 from benchtmpl.workflow.template.base import TemplateHandle
 from benchtmpl.workflow.template.loader import DefaultTemplateLoader
 
@@ -23,20 +24,20 @@ class TestVariableSubstitution(object):
         """Test parameter expansion."""
         template = DefaultTemplateLoader().load(TEMPLATE_FILE)
         arguments = {
-            'code': template.get_argument(
-                identifier='code',
+            'code': TemplateArgument(
+                parameter=template.get_parameter('code'),
                 value=FileHandle(filepath='code/runme.py')
             ),
-            'names': template.get_argument(
-                identifier='names',
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
                 value=FileHandle(filepath='data/myfriends.txt')
             ),
-            'sleeptime': template.get_argument(
-                identifier='sleeptime',
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
                 value=11
             ),
-            'waittime': template.get_argument(
-                identifier='waittime',
+            'waittime': TemplateArgument(
+                parameter=template.get_parameter('waittime'),
                 value=22
             )
         }
@@ -49,8 +50,8 @@ class TestVariableSubstitution(object):
         assert commands == CMDS
         # Default values
         arguments = {
-            'names': template.get_argument(
-                identifier='names',
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
                 value=FileHandle(filepath='data/myfriends.txt')
             )
         }

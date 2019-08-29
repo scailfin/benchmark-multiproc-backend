@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 readme = open('README.rst').read()
 
 install_requires=[
-    'benchmark-templates>=0.1.2'
+    'benchmark-templates>=0.2.0'
 ]
 
 
@@ -27,7 +27,7 @@ extras_require = {
 
 setup(
     name='benchmark-multiprocess',
-    version='0.1.2',
+    version='0.2.0',
     description='Simple Workflow Engine for Reproducible Benchmark Templates',
     long_description=readme,
     long_description_content_type='text/x-rst',

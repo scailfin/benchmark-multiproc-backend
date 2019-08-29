@@ -8,6 +8,7 @@ import time
 
 from benchproc.engine import MultiProcessWorkflowEngine
 from benchtmpl.io.files.base import FileHandle
+from benchtmpl.workflow.parameter.value import TemplateArgument
 from benchtmpl.workflow.template.repo import TemplateRepository
 
 import benchtmpl.error as err
@@ -35,12 +36,17 @@ class TestMultiprocessWorkflowEngine(object):
             template_spec_file=TEMPLATE_FILE
         )
         arguments = {
-            'names': template.get_argument('names', FileHandle(DATA_FILE)),
-            'sleeptime': template.get_argument('sleeptime', 3)
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
+                value=FileHandle(DATA_FILE)
+            ),
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
+                value=3
+            )
         }
-        engine = MultiProcessWorkflowEngine(
-            base_dir=os.path.join(str(tmpdir), 'engine')
-        )
+        engine_dir = os.path.join(str(tmpdir), 'engine')
+        engine = MultiProcessWorkflowEngine(base_dir=engine_dir, run_async=True)
         # Run workflow asyncronously
         run_id = engine.execute(template, arguments)
         while engine.get_state(run_id).is_active():
@@ -49,8 +55,14 @@ class TestMultiprocessWorkflowEngine(object):
         self.validate_run_result(state)
         # Cancel run
         arguments = {
-            'names': template.get_argument('names', FileHandle(DATA_FILE)),
-            'sleeptime': template.get_argument('sleeptime', 30)
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
+                value=FileHandle(DATA_FILE)
+            ),
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
+                value=30
+            )
         }
         run_id = engine.execute(template, arguments)
         while engine.get_state(run_id).is_active():
@@ -61,10 +73,17 @@ class TestMultiprocessWorkflowEngine(object):
             engine.get_state(run_id)
         # Run workflow syncronously
         arguments = {
-            'names': template.get_argument('names', FileHandle(DATA_FILE)),
-            'sleeptime': template.get_argument('sleeptime', 1)
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
+                value=FileHandle(DATA_FILE)
+            ),
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
+                value=1
+            )
         }
-        sync_run_id = engine.execute(template, arguments, run_async=False)
+        engine = MultiProcessWorkflowEngine(base_dir=engine_dir, run_async=False)
+        sync_run_id = engine.execute(template, arguments)
         assert run_id != sync_run_id
         state = engine.get_state(sync_run_id)
         self.validate_run_result(state)
@@ -79,14 +98,22 @@ class TestMultiprocessWorkflowEngine(object):
             template_spec_file=TEMPLATE_WITH_INVALID_CMD
         )
         arguments = {
-            'names': template.get_argument('names', FileHandle(DATA_FILE)),
-            'sleeptime': template.get_argument('sleeptime', 3)
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
+                value=FileHandle(DATA_FILE)
+            ),
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
+                value=3
+            )
         }
         engine = MultiProcessWorkflowEngine(
-            base_dir=os.path.join(str(tmpdir), 'engine')
+            base_dir=os.path.join(str(tmpdir), 'engine'),
+            run_async=False,
+            verbose=True
         )
         # Run workflow syncronously
-        sync_run_id = engine.execute(template, arguments, run_async=False, verbose=True)
+        sync_run_id = engine.execute(template, arguments)
         state = engine.get_state(sync_run_id)
         assert state.is_error()
         assert len(state.messages) > 0
@@ -101,14 +128,21 @@ class TestMultiprocessWorkflowEngine(object):
             template_spec_file=TEMPLATE_WITH_MISSING_FILE
         )
         arguments = {
-            'names': template.get_argument('names', FileHandle(DATA_FILE)),
-            'sleeptime': template.get_argument('sleeptime', 3)
+            'names': TemplateArgument(
+                parameter=template.get_parameter('names'),
+                value=FileHandle(DATA_FILE)
+            ),
+            'sleeptime': TemplateArgument(
+                parameter=template.get_parameter('sleeptime'),
+                value=3
+            )
         }
         engine = MultiProcessWorkflowEngine(
-            base_dir=os.path.join(str(tmpdir), 'engine')
+            base_dir=os.path.join(str(tmpdir), 'engine'),
+            run_async=False
         )
         # Run workflow syncronously
-        sync_run_id = engine.execute(template, arguments, run_async=False)
+        sync_run_id = engine.execute(template, arguments)
         state = engine.get_state(sync_run_id)
         assert state.is_error()
         assert len(state.messages) > 0
@@ -117,10 +151,15 @@ class TestMultiprocessWorkflowEngine(object):
             engine.execute(
                 template=template,
                 arguments={
-                    'names': template.get_argument('names', FileHandle(UNKNOWN_FILE)),
-                    'sleeptime': template.get_argument('sleeptime', 3)
-                },
-                run_async=False
+                    'names': TemplateArgument(
+                        parameter=template.get_parameter('names'),
+                        value=FileHandle(UNKNOWN_FILE)
+                    ),
+                    'sleeptime': TemplateArgument(
+                        parameter=template.get_parameter('sleeptime'),
+                        value=3
+                    )
+                }
             )
 
     def validate_run_result(self, state):

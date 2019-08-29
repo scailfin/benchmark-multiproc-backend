@@ -23,18 +23,19 @@ from functools import partial
 from multiprocessing import Lock, Pool
 from string import Template
 
-from benchtmpl.backend.files import FileCopy
+from benchtmpl.backend.io import FileCopy
+from benchtmpl.backend.base import WorkflowEngine
 from benchtmpl.workflow.resource.base import FileResource
 
 import benchproc.task as tasks
-import benchtmpl.backend.files as fileio
+import benchtmpl.backend.io as fileio
 import benchtmpl.error as err
 import benchtmpl.util.core as util
 import benchtmpl.workflow.state as wf
 import benchtmpl.workflow.template.base as tmpl
 
 
-class MultiProcessWorkflowEngine(object):
+class MultiProcessWorkflowEngine(WorkflowEngine):
     """The workflow engine is used to execute workflow templates for a given
     set of arguments for template parameters as well as to check the state of
     the workflow execution.
@@ -42,7 +43,7 @@ class MultiProcessWorkflowEngine(object):
     Workflow executions, referred to as runs, are identified by unique run ids
     that are assigned by the engine when the execution starts.
     """
-    def __init__(self, base_dir):
+    def __init__(self, base_dir, run_async=True, verbose=False):
         """Initialize the base directory under which all workflow runs are
         maintained. If the directory does not exist it will be created.
 
@@ -50,8 +51,16 @@ class MultiProcessWorkflowEngine(object):
         ----------
         base_dir: string
             Path to directory on disk
+        run_async: bool, optional
+            Run workflows asynchronously or synchronously. The syncronous mode
+            is intended for test purposes or when the engine is used by the
+            command line interface.
+        verbose: bool, optional
+            Print command strings to STDOUT during workflow execution
         """
         self.base_dir = base_dir
+        self.run_async = run_async
+        self.verbose = verbose
         # Create the base directory if it does not exist
         util.create_dir(self.base_dir)
         # Dictionary of all
@@ -76,7 +85,7 @@ class MultiProcessWorkflowEngine(object):
                     pool.terminate()
                 del self.tasks[run_id]
 
-    def execute(self, template, arguments, run_async=True, verbose=False):
+    def execute(self, template, arguments):
         """Execute a given workflow template for a set of argument values.
         Returns an unique identifier for the started workflow run.
 
@@ -87,12 +96,6 @@ class MultiProcessWorkflowEngine(object):
             parameter declarations
         arguments: dict(benchtmpl.workflow.parameter.value.TemplateArgument)
             Dictionary of argument values for parameters in the template
-        run_async: bool, optional
-            Run workflow asynchronously or synchronously. The syncronous mode
-            is intended for test purposes and when used from a command line
-            interface.
-        verbose: bool, optional
-            Print command strings to STDOUT during workflow execution
 
         Returns
         -------
@@ -133,8 +136,8 @@ class MultiProcessWorkflowEngine(object):
                 parameters=template.parameters
             )
             # Run workflow
-            if run_async:
-                self.run_async(
+            if self.run_async:
+                self.execute_async(
                     identifier=identifier,
                     commands=commands,
                     run_dir=run_dir,
@@ -151,7 +154,7 @@ class MultiProcessWorkflowEngine(object):
                     identifier=identifier,
                     commands=commands,
                     run_dir=run_dir,
-                    verbose=verbose
+                    verbose=self.verbose
                 )
                 # Call callback handler with task result
                 callback_function(
@@ -192,7 +195,7 @@ class MultiProcessWorkflowEngine(object):
             except KeyError:
                 raise err.UnknownRunError(run_id)
 
-    def run_async(self, identifier, commands, run_dir, output_files, verbose=False):
+    def execute_async(self, identifier, commands, run_dir, output_files, verbose=False):
         """Run a list of commands in a separate process. This code has been put
         into a separate method so that it can be reused by other modules (e.g.,
         the REANA backend that uses the multi-process backend for test
