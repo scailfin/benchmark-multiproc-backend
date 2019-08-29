@@ -1,6 +1,12 @@
-"""Test functinality of the multiprocess backend."""
+# This file is part of the Reproducible Open Benchmarks for Data Analysis
+# Platform (ROB).
+#
+# Copyright (C) 2019 NYU.
+#
+# ROB is free software; you can redistribute it and/or modify it under the
+# terms of the MIT License; see LICENSE file for more details.
 
-from unittest import TestCase
+"""Test functinality of the multiprocess backend."""
 
 import os
 import pytest
@@ -48,11 +54,18 @@ class TestMultiprocessWorkflowEngine(object):
         engine_dir = os.path.join(str(tmpdir), 'engine')
         engine = MultiProcessWorkflowEngine(base_dir=engine_dir, run_async=True)
         # Run workflow asyncronously
-        run_id = engine.execute(template, arguments)
+        run_id, _ = engine.execute(template, arguments)
         while engine.get_state(run_id).is_active():
             time.sleep(1)
         state = engine.get_state(run_id)
         self.validate_run_result(state)
+        # Remove run resources (can be called multiple times as long as the
+        # task is not active)
+        engine.remove_run(run_id)
+        engine.remove_run(run_id)
+        # Getting the state of a removed run raises an error
+        with pytest.raises(err.UnknownRunError):
+            engine.get_state(run_id)
         # Cancel run
         arguments = {
             'names': TemplateArgument(
@@ -64,13 +77,18 @@ class TestMultiprocessWorkflowEngine(object):
                 value=30
             )
         }
-        run_id = engine.execute(template, arguments)
+        run_id, _ = engine.execute(template, arguments)
         while engine.get_state(run_id).is_active():
+            # Removing resources will raise an error
+            with pytest.raises(RuntimeError):
+                engine.remove_run(run_id)
             # Cancel the run
             engine.cancel_run(run_id)
             break
         with pytest.raises(err.UnknownRunError):
             engine.get_state(run_id)
+        # Remove run resources does not raise an error now
+        engine.remove_run(run_id)
         # Run workflow syncronously
         arguments = {
             'names': TemplateArgument(
@@ -83,10 +101,14 @@ class TestMultiprocessWorkflowEngine(object):
             )
         }
         engine = MultiProcessWorkflowEngine(base_dir=engine_dir, run_async=False)
-        sync_run_id = engine.execute(template, arguments)
+        sync_run_id, state = engine.execute(template, arguments)
         assert run_id != sync_run_id
-        state = engine.get_state(sync_run_id)
         self.validate_run_result(state)
+        self.validate_run_result(state)
+        state = engine.get_state(sync_run_id)
+        # Remove run resources (can be called multiple times as long as the
+        # task is not active)
+        engine.remove_run(run_id)
 
     def test_run_with_invalid_cmd(self, tmpdir):
         """Execute the helloworld example with an invalid shell command."""
@@ -107,16 +129,19 @@ class TestMultiprocessWorkflowEngine(object):
                 value=3
             )
         }
+        # Run workflow syncronously
         engine = MultiProcessWorkflowEngine(
             base_dir=os.path.join(str(tmpdir), 'engine'),
             run_async=False,
             verbose=True
         )
-        # Run workflow syncronously
-        sync_run_id = engine.execute(template, arguments)
+        sync_run_id, state = engine.execute(template, arguments)
+        assert state.is_error()
+        assert len(state.messages) > 0
         state = engine.get_state(sync_run_id)
         assert state.is_error()
         assert len(state.messages) > 0
+
 
     def test_run_with_missing_file(self, tmpdir):
         """Execute the helloworld example with a reference to a missing file."""
@@ -137,12 +162,14 @@ class TestMultiprocessWorkflowEngine(object):
                 value=3
             )
         }
+        # Run workflow syncronously
         engine = MultiProcessWorkflowEngine(
             base_dir=os.path.join(str(tmpdir), 'engine'),
             run_async=False
         )
-        # Run workflow syncronously
-        sync_run_id = engine.execute(template, arguments)
+        sync_run_id, state = engine.execute(template, arguments)
+        assert state.is_error()
+        assert len(state.messages) > 0
         state = engine.get_state(sync_run_id)
         assert state.is_error()
         assert len(state.messages) > 0

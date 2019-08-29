@@ -99,7 +99,7 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
 
         Returns
         -------
-        string
+        string, benchtmpl.workflow.state.WorkflowState
 
         Raises
         ------
@@ -137,7 +137,7 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
             )
             # Run workflow
             if self.run_async:
-                self.execute_async(
+                state = self.execute_async(
                     identifier=identifier,
                     commands=commands,
                     run_dir=run_dir,
@@ -146,9 +146,11 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
                 )
             else:
                 ts = datetime.now()
-                state = wf.StateRunning(created_at=ts, started_at=ts)
                 with self.lock:
-                    self.tasks[identifier] = (state, None)
+                    self.tasks[identifier] = (
+                        wf.StateRunning(created_at=ts, started_at=ts),
+                        None
+                    )
                 # Start the task and wait until completions
                 result = tasks.run(
                     identifier=identifier,
@@ -164,13 +166,14 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
                     run_dir=run_dir,
                     output_files=output_files
                 )
+                state = self.get_state(identifier)
         except Exception as ex:
             # Remove run directory if anything goes wrong while preparing the
             # workflow and starting the run
             shutil.rmtree(run_dir)
             raise ex
         # Return run identifier
-        return identifier
+        return identifier, state
 
     def get_state(self, run_id):
         """Get the status of the workflow with the given identifier.
@@ -183,10 +186,6 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
         Returns
         -------
         benchtmpl.workflow.state.WorkflowState
-
-        Raises
-        ------
-        benchtmpl.error.UnknownRunError
         """
         with self.lock:
             try:
@@ -234,6 +233,27 @@ class MultiProcessWorkflowEngine(WorkflowEngine):
             callback=task_callback_function
         )
         return state
+
+    def remove_run(self, run_id):
+        """Clear internal tasks entry for the given run.
+
+        Parameters
+        ----------
+        run_id: string
+            Unique run identifier
+
+        Raises
+        ------
+        RuntimeError
+        """
+        with self.lock:
+            # Ensure that the run has not been removed already
+            if run_id in self.tasks:
+                state, pool = self.tasks[run_id]
+                # Close the pool and terminate any running processes
+                if state.is_active():
+                    raise RuntimeError('cannot remove active run \'{}\''.format(run_id))
+                del self.tasks[run_id]
 
 
 # ------------------------------------------------------------------------------
